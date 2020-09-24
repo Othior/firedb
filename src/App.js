@@ -1,55 +1,17 @@
 import React, { createRef, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Switch, Link } from "react-router-dom";
 import firebase from 'firebase';
-import 'firebase/firestore';
+// import 'firebase/firestore';
+import { app } from "./service/base";
 import './App.css';
 
 function App() {
   
-  const nom = createRef();
-  const age = createRef();
-  const file = createRef();
   const [fileUrl,setFileUrl] = useState(null)
   const [users,setUsers] = useState([])
-  
-  // Access db 
-let firebaseConfig = {
-  apiKey: "AIzaSyCcRk6_kDqTlEpMx1JGJbZzzgjwjdyIJl4",
-  authDomain: "jamracker-36ec0.firebaseapp.com",
-  databaseURL: "https://jamracker-36ec0.firebaseio.com",
-  projectId: "jamracker-36ec0",
-  storageBucket: "jamracker-36ec0.appspot.com",
-  messagingSenderId: "59652357676",
-  appId: "1:59652357676:web:04872a226de5d2fd101b89"
-};
-// Initialize Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
 
   // DB
-  let db = firebase.firestore();
-
-  // Rechercher les données dans la collection et affiche l'element de demandé
-  const get = (ev,id) => {
-
-    ev.preventDefault();
-    
-    if(!(id === null)){
-      let docRef = db.collection("person").doc(id);
-  
-      docRef.get().then(function(doc) {
-        if (doc.exists) {
-            console.log("Document data:", doc.data());
-        } else {
-            // doc.data() will be undefined in this case
-            console.log("No such document!");
-        }
-      }).catch(function(error) {
-          console.log("Error getting document:", error);
-      });
-    }
-
-  }
+  let db = app.firestore();
 
   // Supprimer les données de la collection
   const del = (ev,id) => {
@@ -63,23 +25,31 @@ if (!firebase.apps.length) {
     });
   }
 
+  const fetchUser = () => {
+    db.collection('person').get().then((snapshot) => {
+
+        let data = [];
+        snapshot.forEach((doc) => {
+          data.push({
+            id: doc.id,
+            ...doc.data(),
+          });
+        });
+        setUsers(data);
+      })
+    }
   // affiche tout les elements de la db pour la collection person
   useEffect( () => {
-
-    const fetchUser = async () =>{
-      const usersCollections = await db.collection('person').get()
-      setUsers((await usersCollections).docs.map(doc=>{
-        return doc.data()
-      }))
-    }
-
+    
     fetchUser();
 
-  },[users])
+  },[])
 
   // envoie au storage l'element a stocker
   const onFileChange = async(e) => {
+    // console.log(e.target)
     const file = e.target.files[0]
+    console.log(e.target)
     const storageRef = firebase.storage().ref()
     const fileRef = storageRef.child(file.name)
     await fileRef.put(file)
@@ -102,10 +72,10 @@ if (!firebase.apps.length) {
 
   return (
     <div className="App">
-      
+      <header></header>
       <div>
         <form onSubmit={(ev) => uploadFiles(ev)}>
-          <label>Files : </label> <input type="file" onChange={(e) => onFileChange(e)} />
+          <label>Files : </label> <input type="file" onChange={(e) => onFileChange(e)}/>
           <label>Name : </label> <input type="text" name="username" />
           <button>Submit</button>
         </form>
@@ -116,13 +86,12 @@ if (!firebase.apps.length) {
           {users.map((user)=>(
             <li key={user.name}> 
               
-              <img src={user.avatar} alt={user.name}/>
+              <img width="400" height="400" src={user.avatar} alt={user.name}/>
              
               <p>
                 <a href={user.avatar} download="song" >
                   {user.name} 
                 </a>
-                {/* <button onClick={(ev) => get(ev)}>Get</button>  */}
                 <button onClick={(ev) => del(ev,user.name)}>Del</button> 
               </p>
               
